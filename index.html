@@ -26,9 +26,14 @@
            border:none; border-radius:10px; background:var(--accent); color:#1a1a1a; cursor:pointer; }
   button:hover { filter:brightness(1.05); }
   .result { margin-top:22px; display:none; }
-  .price { font-size:40px; font-weight:800; color:var(--accent); text-align:center; }
-  .range { text-align:center; color:var(--muted); margin-top:4px; }
-  .plate-str { text-align:center; font-size:18px; margin-top:8px; letter-spacing:2px; }
+  .plate-str { text-align:center; font-size:18px; margin-bottom:14px; letter-spacing:2px; }
+  .prices { display:flex; gap:12px; }
+  .pcol { flex:1; background:#0d201d; border-radius:12px; padding:14px 10px; text-align:center; }
+  .pcol.sell { border:1px solid var(--accent); }
+  .ptitle { font-size:12px; color:var(--muted); margin-bottom:6px; min-height:32px; }
+  .price { font-size:30px; font-weight:800; color:var(--accent); }
+  .price2 { font-size:30px; font-weight:800; color:var(--text); }
+  .range { color:var(--muted); margin-top:4px; font-size:12px; }
   .factors { margin-top:18px; border-top:1px solid #2c4a43; padding-top:14px; }
   .factors h3 { font-size:13px; color:var(--muted); font-weight:600; margin:0 0 10px; }
   .frow { display:flex; justify-content:space-between; align-items:center; gap:12px;
@@ -69,9 +74,19 @@
     </div>
     <div class="err" id="err"></div>
     <div class="result" id="result">
-      <div class="price" id="price"></div>
-      <div class="range" id="range"></div>
       <div class="plate-str" id="plateStr"></div>
+      <div class="prices">
+        <div class="pcol sell">
+          <div class="ptitle">السعر المتوقع للبيع · Likely sale price</div>
+          <div class="price" id="sellPrice"></div>
+          <div class="range" id="sellRange"></div>
+        </div>
+        <div class="pcol list">
+          <div class="ptitle">سعر العرض لدى التجار · Dealer asking price</div>
+          <div class="price2" id="listPrice"></div>
+          <div class="range" id="listRange"></div>
+        </div>
+      </div>
       <div class="factors">
         <h3>ما الذي يؤثر في السعر · What affects the price</h3>
         <div id="factors"></div>
@@ -82,7 +97,7 @@
 </div>
 <script>
 // ===== The trained model is embedded at build time (no server needed) =====
-const MODEL = /*__MODEL__*/ {"global_log": 9.891925375607032, "factors": {"digit_count": {"3": -0.002064822459378278, "4": -1.319440028472873, "2": 0.5323097159114075, "1": 1.5019237339319418, "6": -0.44308898431453403}, "letter_pattern": {"AAA": 0.5700239572688856, "AAB": -0.15945292011446618, "ABC": 0.014671087377796484, "OTHER": 0.6136834167398962, "AB": -0.1711005532243466, "AA": -0.4840897240577515}, "digit_pattern": {"mixed": -0.09383038269078597, "round": 0.25929620361714534, "palindrome": -0.05149709054160288, "sequence": -0.052363289495453484, "same": 0.190552554133458, "single": 0.25303606942817064}, "digit_repeat": {"1": -0.230667350429679, "3": 0.21112427784274793, "2": 0.11875155958226398, "4": 1.348243241062925}, "roundness": {"0": 0.014207266019418812, "3": 0.20827527452596425, "1": 0.11952430003764124, "2": -0.10233979320619424}}, "sigma": 0.7781516512211035, "price_min": 43.0, "price_max": 1000000.0, "n_samples": 2060, "metrics": {"rmse_log": 0.7782, "median_abs_pct_err": 0.442}, "trained_at": "2026-06-11", "sources": ["j6j6e", "luhah"]} /*__END__*/;
+const MODEL = /*__MODEL__*/ {"global_log": 9.891925375607032, "factors": {"digit_count": {"3": -0.054559131175583364, "4": -1.1219453728752498, "2": 0.4560632165250807, "1": 1.3859538048872546, "6": -0.37802809487622535}, "letter_pattern": {"AAA": 0.5273723422953304, "AAB": -0.11314118316772986, "ABC": 0.011189026901664902, "OTHER": 0.5471764870302183, "AB": -0.2634713026289241, "AA": -0.5327722038204319}, "digit_pattern": {"mixed": -0.0960926034088573, "round": 0.1942592657077069, "palindrome": -0.03121373406797163, "sequence": -0.08706432786954185, "same": 0.21252075750561028, "single": 0.23739361544582926}, "digit_repeat": {"1": -0.18272598688554254, "3": 0.13993743664832217, "2": 0.10018445520732941, "4": 1.0937509529378562}, "roundness": {"0": 0.008793605765487888, "3": 0.14529096105030767, "1": 0.1277392079733437, "2": -0.06694099732313909}, "source": {"j6j6e": 0.1438934480279813, "luhah": -0.5780034265179282}}, "sigma": 0.7347988587127681, "price_min": 43.0, "price_max": 1000000.0, "n_samples": 2060, "feature_names": ["digit_count", "letter_pattern", "digit_pattern", "digit_repeat", "roundness", "source"], "metrics": {"rmse_log": 0.7348, "median_abs_pct_err": 0.439}, "trained_at": "2026-06-11", "sources": ["j6j6e", "luhah"]} /*__END__*/;
 
 // ===== Port of pricing/letters.py =====
 const AR2LAT = {"ا":"A","ب":"B","ح":"J","د":"D","ر":"R","س":"S","ص":"X","ط":"T","ع":"E",
@@ -165,28 +180,44 @@ function labelFor(f, v){ if (LABELS[f]) return LABELS[f][v] || (f+": "+v); if (D
 function effectText(mult){ const pct=(mult-1)*100; if (Math.abs(pct)<4) return "≈ no change";
   return (pct>0?"+":"−")+Math.abs(Math.round(pct))+"%"; }
 
-// ===== Port of pricing/model.py estimate() =====
+// ===== Port of pricing/model.py estimate_both() =====
 const Z = 0.674;
+const ANCHOR_SELL = "luhah", ANCHOR_LIST = "j6j6e";
+const FIT_NAMES = MODEL.feature_names || FEATURE_NAMES;
+const HAS_SOURCE = FIT_NAMES.indexOf("source") !== -1;
 function clip(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
+function scoreLog(feats) {
+  let log = MODEL.global_log;
+  for (const name of FIT_NAMES) {
+    log += (MODEL.factors[name] && MODEL.factors[name][feats[name]]) || 0;
+  }
+  return log;
+}
+function band(log) {
+  return {
+    estimate: Math.round(clip(Math.exp(log), MODEL.price_min, MODEL.price_max)),
+    low: Math.round(clip(Math.exp(log - Z*MODEL.sigma), MODEL.price_min, MODEL.price_max)),
+    high: Math.round(clip(Math.exp(log + Z*MODEL.sigma), MODEL.price_min, MODEL.price_max)),
+  };
+}
 function estimate(plate) {
   const [letters, digits] = splitPlate(plate);
   const feats = plateFeatures(letters, digits);
-  let log = MODEL.global_log;
-  const contribs = {};
-  for (const name of FEATURE_NAMES) {
-    const eff = (MODEL.factors[name] && MODEL.factors[name][feats[name]]) || 0;
-    log += eff; contribs[name] = eff;
-  }
-  const point = clip(Math.exp(log), MODEL.price_min, MODEL.price_max);
-  const low = clip(Math.exp(log - Z*MODEL.sigma), MODEL.price_min, MODEL.price_max);
-  const high = clip(Math.exp(log + Z*MODEL.sigma), MODEL.price_min, MODEL.price_max);
-  let breakdown = FEATURE_NAMES.map(name => {
-    const mult = Math.exp(contribs[name]);
+  // plate-feature breakdown (source excluded — it's not a plate trait)
+  const breakdown = FEATURE_NAMES.map(name => {
+    const mult = Math.exp((MODEL.factors[name] && MODEL.factors[name][feats[name]]) || 0);
     return { label: labelFor(name, feats[name]), effect: effectText(mult),
              pct: Math.round((mult-1)*100) };
   }).filter(b => Math.abs(b.pct) >= 4).sort((a,b)=>Math.abs(b.pct)-Math.abs(a.pct));
-  return { plate: (letters+" "+digits).trim(), estimate: Math.round(point),
-           low: Math.round(low), high: Math.round(high), breakdown };
+
+  let sell, list;
+  if (HAS_SOURCE) {
+    sell = band(scoreLog(Object.assign({}, feats, {source: ANCHOR_SELL})));
+    list = band(scoreLog(Object.assign({}, feats, {source: ANCHOR_LIST})));
+  } else {
+    sell = list = band(scoreLog(feats));
+  }
+  return { plate: (letters+" "+digits).trim(), sell, list, breakdown };
 }
 
 // ===== UI =====
@@ -198,9 +229,10 @@ function run() {
   render(estimate((letters+" "+numbers).trim()));
 }
 function render(d) {
-  $('price').textContent = d.estimate.toLocaleString() + ' ﷼';
-  $('range').textContent = 'القيمة المتوقعة بين · likely between ' +
-                           d.low.toLocaleString() + ' و ' + d.high.toLocaleString() + ' ﷼';
+  $('sellPrice').textContent = d.sell.estimate.toLocaleString() + ' ﷼';
+  $('sellRange').textContent = d.sell.low.toLocaleString() + ' – ' + d.sell.high.toLocaleString();
+  $('listPrice').textContent = d.list.estimate.toLocaleString() + ' ﷼';
+  $('listRange').textContent = d.list.low.toLocaleString() + ' – ' + d.list.high.toLocaleString();
   $('plateStr').textContent = d.plate;
   const f = $('factors'); f.innerHTML = '';
   if (!d.breakdown.length) f.innerHTML = '<div class="frow"><span class="lbl">لا توجد عوامل مميّزة · nothing notable about this plate</span></div>';
