@@ -27,13 +27,17 @@
   button:hover { filter:brightness(1.05); }
   .result { margin-top:22px; display:none; }
   .plate-str { text-align:center; font-size:18px; margin-bottom:14px; letter-spacing:2px; }
-  .prices { display:flex; gap:12px; }
-  .pcol { flex:1; background:#0d201d; border-radius:12px; padding:14px 10px; text-align:center; }
-  .pcol.sell { border:1px solid var(--accent); }
-  .ptitle { font-size:12px; color:var(--muted); margin-bottom:6px; min-height:32px; }
-  .price { font-size:30px; font-weight:800; color:var(--accent); }
-  .price2 { font-size:30px; font-weight:800; color:var(--text); }
-  .range { color:var(--muted); margin-top:4px; font-size:12px; }
+  .headline { text-align:center; }
+  .hlabel { color:var(--muted); font-size:13px; margin-bottom:4px; }
+  .price { font-size:38px; font-weight:800; color:var(--accent); }
+  .range { color:var(--muted); margin-top:4px; font-size:13px; }
+  .secondary { text-align:center; color:var(--muted); font-size:13px; margin-top:10px; }
+  .verdict { margin-top:16px; padding:16px; border-radius:12px; text-align:center; line-height:1.55; }
+  .verdict b { display:block; font-size:18px; margin-bottom:6px; }
+  .verdict.good { background:rgba(121,210,155,.14); border:1px solid #79d29b; color:#cdeedb; }
+  .verdict.fair { background:rgba(212,175,55,.14); border:1px solid var(--accent); color:#f0e2b8; }
+  .verdict.high { background:rgba(255,138,128,.14); border:1px solid #ff8a80; color:#ffd9d4; }
+  .offer { margin-top:14px; }
   .factors { margin-top:18px; border-top:1px solid #2c4a43; padding-top:14px; }
   .factors h3 { font-size:13px; color:var(--muted); font-weight:600; margin:0 0 10px; }
   .frow { display:flex; justify-content:space-between; align-items:center; gap:12px;
@@ -65,7 +69,11 @@
         <input id="numbers" placeholder="777" inputmode="numeric" autocomplete="off">
       </div>
     </div>
-    <button id="go">احسب السعر · Estimate</button>
+    <div class="offer">
+      <label>السعر المعروض عليك (اختياري) · Price you're offered (optional)</label>
+      <input id="offer" inputmode="numeric" placeholder="مثال · e.g. 20000" autocomplete="off">
+    </div>
+    <button id="go">قيّم اللوحة · Check the plate</button>
     <div class="examples">
       جرّب:
       <a data-l="م م م" data-n="777">م م م 777</a>
@@ -75,18 +83,13 @@
     <div class="err" id="err"></div>
     <div class="result" id="result">
       <div class="plate-str" id="plateStr"></div>
-      <div class="prices">
-        <div class="pcol sell">
-          <div class="ptitle">السعر المتوقع للبيع · Likely sale price</div>
-          <div class="price" id="sellPrice"></div>
-          <div class="range" id="sellRange"></div>
-        </div>
-        <div class="pcol list">
-          <div class="ptitle">سعر العرض في الإعلانات · Asking price</div>
-          <div class="price2" id="listPrice"></div>
-          <div class="range" id="listRange"></div>
-        </div>
+      <div class="headline">
+        <div class="hlabel">القيمة التقديرية عند إعادة البيع · Estimated resale value</div>
+        <div class="price" id="sellPrice"></div>
+        <div class="range" id="sellRange"></div>
       </div>
+      <div class="verdict" id="verdict" style="display:none"></div>
+      <div class="secondary" id="secondary"></div>
       <div class="factors">
         <h3>ما الذي يؤثر في السعر · What affects the price</h3>
         <div id="factors"></div>
@@ -228,12 +231,15 @@ function run() {
   if (!letters && !numbers) { $('err').textContent = 'أدخل اللوحة · enter a plate'; return; }
   render(estimate((letters+" "+numbers).trim()));
 }
+function toAscii(s){ return s.replace(/[٠-٩]/g, c => String(c.charCodeAt(0)-0x660)); }
+function money(n){ return n.toLocaleString() + ' ﷼'; }
+
 function render(d) {
-  $('sellPrice').textContent = d.sell.estimate.toLocaleString() + ' ﷼';
-  $('sellRange').textContent = d.sell.low.toLocaleString() + ' – ' + d.sell.high.toLocaleString();
-  $('listPrice').textContent = d.list.estimate.toLocaleString() + ' ﷼';
-  $('listRange').textContent = d.list.low.toLocaleString() + ' – ' + d.list.high.toLocaleString();
   $('plateStr').textContent = d.plate;
+  $('sellPrice').textContent = money(d.sell.estimate);
+  $('sellRange').textContent = 'الأرجح بين · likely ' + d.sell.low.toLocaleString() + ' – ' + d.sell.high.toLocaleString() + ' ﷼';
+  $('secondary').textContent = 'يُعرض عادةً في الإعلانات بحوالي · typically listed around ' + money(d.list.estimate);
+  renderVerdict(d);
   const f = $('factors'); f.innerHTML = '';
   if (!d.breakdown.length) f.innerHTML = '<div class="frow"><span class="lbl">لا توجد عوامل مميّزة · nothing notable about this plate</span></div>';
   for (const b of d.breakdown) {
@@ -247,9 +253,35 @@ function render(d) {
                           ' لوحة معروضة · estimate based on ' + MODEL.n_samples.toLocaleString() + ' listings';
   $('result').style.display = 'block';
 }
+
+function renderVerdict(d) {
+  const v = $('verdict');
+  const off = parseFloat(toAscii($('offer').value).replace(/[^\d.]/g,''));
+  if (!off || off <= 0) { v.style.display = 'none'; return; }
+  const S = d.sell.estimate, L = d.list.estimate, profit = S - off;
+  let cls, head, body;
+  if (off <= S) {
+    cls = 'good'; head = '✅ صفقة جيدة · Good deal';
+    body = 'سعر الشراء أقل من قيمة إعادة البيع. يمكنك إعادة بيعها بحوالي ' + money(S) +
+           '، بربح تقديري ~' + money(profit) + '.\n' +
+           'Below resale value — you could resell around ' + money(S) + ' for ~' + money(profit) + ' profit.';
+  } else if (off <= L) {
+    cls = 'fair'; head = '⚖️ هامش ضعيف · Tight margin';
+    body = 'أعلى من قيمة البيع السريع (' + money(S) + ') لكنه ضمن نطاق أسعار العرض. لن تربح إلا إذا بعتها قرب أعلى سعر (~' + money(L) + ').\n' +
+           'Above quick-sale value but within the asking range — only profits if you sell near the top (~' + money(L) + ').';
+  } else {
+    cls = 'high'; head = '❌ مرتفع · Overpriced';
+    body = 'أعلى من سعر العرض المعتاد (' + money(L) + ') بـ ' + money(off - L) + '. لا يوجد هامش لإعادة البيع.\n' +
+           'Above typical asking (' + money(L) + ') — no resale margin.';
+  }
+  v.className = 'verdict ' + cls;
+  v.innerHTML = '<b>' + head + '</b>' + body.replace(/\n/g, '<br>');
+  v.style.display = 'block';
+}
+
 $('go').addEventListener('click', run);
-$('letters').addEventListener('keydown', e => { if (e.key==='Enter') run(); });
-$('numbers').addEventListener('keydown', e => { if (e.key==='Enter') run(); });
+['letters','numbers','offer'].forEach(id =>
+  $(id).addEventListener('keydown', e => { if (e.key === 'Enter') run(); }));
 document.querySelectorAll('.examples a').forEach(a => a.addEventListener('click', () => {
   $('letters').value=a.dataset.l; $('numbers').value=a.dataset.n; run();
 }));
