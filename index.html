@@ -132,16 +132,15 @@ function splitPlate(number) {
 }
 
 // ===== Live availability lookup over the embedded listings =====
-function lkey(s){ return s.split("").sort().join(""); }
 function lookup(letters, numbers){
-  const qkey = lkey(letters);
-  if (!qkey) return { type: "none", items: [] };
-  const exact = LISTINGS.filter(x => x.n === numbers && lkey(x.l) === qkey);
+  if (!letters) return { type: "none", items: [] };
+  // Match the exact letter SEQUENCE (DES stays DES, not SED).
+  const exact = LISTINGS.filter(x => x.n === numbers && x.l === letters);
   if (exact.length) return { type: "exact", items: exact.slice().sort((a,b)=>a.p-b.p) };
-  // Keep the LETTERS fixed; show other plates with the same letters (different numbers),
-  // closest number first.
+  // Keep the letters fixed; show other plates with the same letter sequence
+  // (different numbers), closest number first.
   const qn = parseInt(numbers || "0", 10), qd = numbers.length;
-  const sameLetters = LISTINGS.filter(x => lkey(x.l) === qkey);
+  const sameLetters = LISTINGS.filter(x => x.l === letters);
   if (sameLetters.length){
     sameLetters.sort((a,b) =>
       ((a.n.length===qd?0:1) - (b.n.length===qd?0:1)) ||
