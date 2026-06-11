@@ -133,20 +133,21 @@ function splitPlate(number) {
 
 // ===== Live availability lookup over the embedded listings =====
 function lkey(s){ return s.split("").sort().join(""); }
-function sharedLetters(letters, qkey){
-  const c = {}; for (const ch of qkey) c[ch] = (c[ch]||0)+1;
-  let n = 0; for (const ch of letters) if (c[ch] > 0){ c[ch]--; n++; }
-  return n;
-}
 function lookup(letters, numbers){
-  if (!numbers) return { type: "none", items: [] };
   const qkey = lkey(letters);
+  if (!qkey) return { type: "none", items: [] };
   const exact = LISTINGS.filter(x => x.n === numbers && lkey(x.l) === qkey);
   if (exact.length) return { type: "exact", items: exact.slice().sort((a,b)=>a.p-b.p) };
-  const sameNum = LISTINGS.filter(x => x.n === numbers);
-  if (sameNum.length){
-    sameNum.sort((a,b)=> sharedLetters(b.l,qkey)-sharedLetters(a.l,qkey) || a.p-b.p);
-    return { type: "closest", items: sameNum.slice(0, 6) };
+  // Keep the LETTERS fixed; show other plates with the same letters (different numbers),
+  // closest number first.
+  const qn = parseInt(numbers || "0", 10), qd = numbers.length;
+  const sameLetters = LISTINGS.filter(x => lkey(x.l) === qkey);
+  if (sameLetters.length){
+    sameLetters.sort((a,b) =>
+      ((a.n.length===qd?0:1) - (b.n.length===qd?0:1)) ||
+      (Math.abs(parseInt(a.n,10)-qn) - Math.abs(parseInt(b.n,10)-qn)) ||
+      (a.p - b.p));
+    return { type: "closest", items: sameLetters.slice(0, 6) };
   }
   return { type: "none", items: [] };
 }
@@ -328,7 +329,7 @@ function renderAvailability(plate){
   if (r.type === 'exact'){
     a.innerHTML = '<h3>📍 معروضة حالياً في المصادر · Currently listed — asking price:</h3>' + listingRows(r.items);
   } else if (r.type === 'closest'){
-    a.innerHTML = '<h3>لا يوجد عرض مطابق — الأقرب بنفس الرقم · No exact listing — closest plates with the same number:</h3>' + listingRows(r.items);
+    a.innerHTML = '<h3>لا يوجد عرض مطابق — لوحات أخرى بنفس الأحرف · No exact listing — other plates with the same letters:</h3>' + listingRows(r.items);
   } else {
     a.innerHTML = '<div class="lnote">غير معروضة حالياً في المصادر · not currently listed in the sources.</div>';
   }
