@@ -15,8 +15,9 @@
   .sub { color:var(--muted); text-align:center; margin:0 0 24px; font-size:14px; }
   .card { background:var(--card); border-radius:16px; padding:24px;
           box-shadow:0 10px 30px rgba(0,0,0,.35); }
-  label { display:block; font-size:13px; color:var(--muted); margin:0 0 6px; }
-  .row { display:flex; gap:12px; }
+  label { display:block; font-size:13px; color:var(--muted); margin:0 0 6px;
+          white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row { display:flex; gap:12px; align-items:flex-end; }
   .row > div { flex:1; }
   input { width:100%; padding:14px; font-size:20px; text-align:center; border-radius:10px;
           border:1px solid #2c4a43; background:#0d201d; color:var(--text); }
@@ -51,7 +52,7 @@
   <div class="card">
     <div class="row">
       <div>
-        <label>الأحرف · Letters (عربي أو English)</label>
+        <label>الأحرف · Letters</label>
         <input id="letters" placeholder="م م م" autocomplete="off">
       </div>
       <div>
