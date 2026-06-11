@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>تقدير سعر اللوحة · Plate Price Estimator</title>
+<style>
+  :root { --bg:#0f1c1a; --card:#16302b; --accent:#d4af37; --text:#eaf1ee; --muted:#9fb3ad; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:'Tajawal',system-ui,Arial,sans-serif; background:var(--bg);
+         color:var(--text); min-height:100vh; display:flex; align-items:flex-start;
+         justify-content:center; padding:32px 16px; }
+  .wrap { width:100%; max-width:560px; }
+  h1 { font-size:24px; margin:0 0 4px; text-align:center; }
+  .sub { color:var(--muted); text-align:center; margin:0 0 24px; font-size:14px; }
+  .card { background:var(--card); border-radius:16px; padding:24px;
+          box-shadow:0 10px 30px rgba(0,0,0,.35); }
+  label { display:block; font-size:13px; color:var(--muted); margin:0 0 6px; }
+  .row { display:flex; gap:12px; }
+  .row > div { flex:1; }
+  input { width:100%; padding:14px; font-size:20px; text-align:center; border-radius:10px;
+          border:1px solid #2c4a43; background:#0d201d; color:var(--text); }
+  input:focus { outline:none; border-color:var(--accent); }
+  button { width:100%; margin-top:18px; padding:14px; font-size:17px; font-weight:700;
+           border:none; border-radius:10px; background:var(--accent); color:#1a1a1a; cursor:pointer; }
+  button:hover { filter:brightness(1.05); }
+  .result { margin-top:22px; display:none; }
+  .price { font-size:40px; font-weight:800; color:var(--accent); text-align:center; }
+  .range { text-align:center; color:var(--muted); margin-top:4px; }
+  .plate-str { text-align:center; font-size:18px; margin-top:8px; letter-spacing:2px; }
+  .factors { margin-top:18px; border-top:1px solid #2c4a43; padding-top:14px; }
+  .factors h3 { font-size:13px; color:var(--muted); font-weight:600; margin:0 0 10px; }
+  .frow { display:flex; justify-content:space-between; align-items:center; gap:12px;
+          font-size:14px; padding:7px 0; border-bottom:1px solid rgba(255,255,255,.04); }
+  .frow:last-child { border-bottom:none; }
+  .frow .lbl { color:var(--text); }
+  .frow .eff { font-variant-numeric:tabular-nums; font-weight:700; white-space:nowrap; }
+  .eff.up { color:#79d29b; }
+  .eff.down { color:#ff8a80; }
+  .eff.flat { color:var(--muted); }
+  .meta { text-align:center; color:var(--muted); font-size:12px; margin-top:16px; }
+  .err { color:#ff8a80; text-align:center; margin-top:14px; }
+  .examples { text-align:center; margin-top:12px; font-size:13px; color:var(--muted); }
+  .examples a { color:var(--accent); cursor:pointer; text-decoration:none; margin:0 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>تقدير سعر اللوحة</h1>
+  <p class="sub">Saudi Plate Price Estimator — enter letters &amp; numbers</p>
+  <div class="card">
+    <div class="row">
+      <div>
+        <label>الأحرف · Letters (عربي أو English)</label>
+        <input id="letters" placeholder="م م م" autocomplete="off">
+      </div>
+      <div>
+        <label>الأرقام · Numbers</label>
+        <input id="numbers" placeholder="777" inputmode="numeric" autocomplete="off">
+      </div>
+    </div>
+    <button id="go">احسب السعر · Estimate</button>
+    <div class="examples">
+      جرّب:
+      <a data-l="م م م" data-n="777">م م م 777</a>
+      <a data-l="أ" data-n="1">أ 1</a>
+      <a data-l="س ب ح" data-n="7271">س ب ح 7271</a>
+    </div>
+    <div class="err" id="err"></div>
+    <div class="result" id="result">
+      <div class="price" id="price"></div>
+      <div class="range" id="range"></div>
+      <div class="plate-str" id="plateStr"></div>
+      <div class="factors">
+        <h3>ما الذي يؤثر في السعر · What affects the price</h3>
+        <div id="factors"></div>
+      </div>
+      <div class="meta" id="meta"></div>
+    </div>
+  </div>
+</div>
+<script>
+// ===== The trained model is embedded at build time (no server needed) =====
+const MODEL = /*__MODEL__*/ {"global_log": 9.891925375607032, "factors": {"digit_count": {"3": -0.002064822459378278, "4": -1.319440028472873, "2": 0.5323097159114075, "1": 1.5019237339319418, "6": -0.44308898431453403}, "letter_pattern": {"AAA": 0.5700239572688856, "AAB": -0.15945292011446618, "ABC": 0.014671087377796484, "OTHER": 0.6136834167398962, "AB": -0.1711005532243466, "AA": -0.4840897240577515}, "digit_pattern": {"mixed": -0.09383038269078597, "round": 0.25929620361714534, "palindrome": -0.05149709054160288, "sequence": -0.052363289495453484, "same": 0.190552554133458, "single": 0.25303606942817064}, "digit_repeat": {"1": -0.230667350429679, "3": 0.21112427784274793, "2": 0.11875155958226398, "4": 1.348243241062925}, "roundness": {"0": 0.014207266019418812, "3": 0.20827527452596425, "1": 0.11952430003764124, "2": -0.10233979320619424}}, "sigma": 0.7781516512211035, "price_min": 43.0, "price_max": 1000000.0, "n_samples": 2060, "metrics": {"rmse_log": 0.7782, "median_abs_pct_err": 0.442}, "trained_at": "2026-06-11", "sources": ["j6j6e", "luhah"]} /*__END__*/;
+
+// ===== Port of pricing/letters.py =====
+const AR2LAT = {"ا":"A","ب":"B","ح":"J","د":"D","ر":"R","س":"S","ص":"X","ط":"T","ع":"E",
+  "ق":"G","ك":"K","ل":"L","م":"Z","ن":"N","ه":"H","ى":"V","أ":"A","إ":"A","آ":"A","ي":"V","ة":"H"};
+function splitPlate(number) {
+  let letters = "", digits = "";
+  for (const ch of number) {
+    if (/\s/.test(ch)) continue;
+    const code = ch.codePointAt(0);
+    if (ch >= "0" && ch <= "9") { digits += ch; }
+    else if (code >= 0x660 && code <= 0x669) { digits += String(code - 0x660); } // ٠-٩
+    else { letters += (AR2LAT[ch] || ch.toUpperCase()); }
+  }
+  return [letters, digits];
+}
+
+// ===== Port of pricing/features.py =====
+const FEATURE_NAMES = ["digit_count","letter_pattern","digit_pattern","digit_repeat","roundness"];
+function counts(str) { const m = {}; for (const c of str) m[c]=(m[c]||0)+1; return Object.values(m); }
+function letterPattern(letters) {
+  const sig = counts(letters).sort((a,b)=>b-a).join(",");
+  return {"3":"AAA","2,1":"AAB","1,1,1":"ABC","2":"AA","1,1":"AB","1":"A","":"NONE"}[sig] || "OTHER";
+}
+function digitPattern(d) {
+  if (!d) return "none";
+  if (d.length === 1) return "single";
+  if (new Set(d).size === 1) return "same";
+  if (d === [...d].reverse().join("")) return "palindrome";
+  let asc=true, desc=true;
+  for (let i=0;i<d.length-1;i++){ if(+d[i]+1!==+d[i+1])asc=false; if(+d[i]-1!==+d[i+1])desc=false; }
+  if (asc||desc) return "sequence";
+  const n = parseInt(d,10);
+  if (n%1000===0 || n%100===0) return "round";
+  return "mixed";
+}
+function maxRepeat(d){ return d ? Math.max(...counts(d)) : 0; }
+function trailingZeros(d){ if(!d || [...new Set(d)].join("")==="0") return 0; return d.length - d.replace(/0+$/,"").length; }
+function plateFeatures(letters, digits) {
+  return {
+    digit_count: String(digits.length),
+    letter_pattern: letterPattern(letters),
+    digit_pattern: digitPattern(digits),
+    digit_repeat: String(maxRepeat(digits)),
+    roundness: String(trailingZeros(digits)),
+  };
+}
+
+// ===== Port of pricing/describe.py =====
+const LABELS = {
+  letter_pattern: {
+    AAA:"ثلاثة أحرف متطابقة · All three letters the same",
+    AAB:"حرفان متطابقان · Two letters match",
+    ABC:"ثلاثة أحرف مختلفة · Three different letters",
+    AA:"حرفان متطابقان · Both letters the same",
+    AB:"حرفان مختلفان · Two different letters",
+    A:"حرف واحد · Single letter",
+    OTHER:"تركيبة أحرف غير معتادة · Unusual letter combination",
+    NONE:"بدون أحرف · No letters",
+  },
+  digit_pattern: {
+    same:"أرقام متكررة مثل 777 · Repeated digits (e.g. 777)",
+    sequence:"أرقام متسلسلة مثل 1234 · Sequential digits (e.g. 1234)",
+    palindrome:"رقم متماثل مثل 1221 · Mirror number (e.g. 1221)",
+    round:"رقم دائري مثل 5000 · Round number (e.g. 5000)",
+    single:"رقم من خانة واحدة · Single-digit number",
+    mixed:"رقم عادي · Ordinary number",
+    none:"بدون أرقام · No number",
+  },
+};
+const DYN = {
+  digit_count: v => ({"1":"رقم من خانة واحدة · Single digit","2":"رقم من خانتين · 2 digits",
+    "3":"رقم من ٣ خانات · 3 digits","4":"رقم من ٤ خانات · 4 digits"}[v] || v+" digits"),
+  digit_repeat: v => ({"0":"—","1":"بدون أرقام مكررة · No repeating digit",
+    "2":"رقم يتكرر مرتين · A digit repeats twice","3":"رقم يتكرر ٣ مرات · A digit repeats 3 times",
+    "4":"أربعة أرقام متطابقة · Four identical digits"}[v] || ("a digit repeats "+v+"×")),
+  roundness: v => ({"0":"لا ينتهي بأصفار · Doesn't end in zeros","1":"ينتهي بصفر · Ends in one zero",
+    "2":"ينتهي بصفرين · Ends in two zeros","3":"ينتهي بثلاثة أصفار · Ends in three zeros"}[v] || ("ends in "+v+" zeros")),
+};
+function labelFor(f, v){ if (LABELS[f]) return LABELS[f][v] || (f+": "+v); if (DYN[f]) return DYN[f](v); return f+": "+v; }
+function effectText(mult){ const pct=(mult-1)*100; if (Math.abs(pct)<4) return "≈ no change";
+  return (pct>0?"+":"−")+Math.abs(Math.round(pct))+"%"; }
+
+// ===== Port of pricing/model.py estimate() =====
+const Z = 0.674;
+function clip(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
+function estimate(plate) {
+  const [letters, digits] = splitPlate(plate);
+  const feats = plateFeatures(letters, digits);
+  let log = MODEL.global_log;
+  const contribs = {};
+  for (const name of FEATURE_NAMES) {
+    const eff = (MODEL.factors[name] && MODEL.factors[name][feats[name]]) || 0;
+    log += eff; contribs[name] = eff;
+  }
+  const point = clip(Math.exp(log), MODEL.price_min, MODEL.price_max);
+  const low = clip(Math.exp(log - Z*MODEL.sigma), MODEL.price_min, MODEL.price_max);
+  const high = clip(Math.exp(log + Z*MODEL.sigma), MODEL.price_min, MODEL.price_max);
+  let breakdown = FEATURE_NAMES.map(name => {
+    const mult = Math.exp(contribs[name]);
+    return { label: labelFor(name, feats[name]), effect: effectText(mult),
+             pct: Math.round((mult-1)*100) };
+  }).filter(b => Math.abs(b.pct) >= 4).sort((a,b)=>Math.abs(b.pct)-Math.abs(a.pct));
+  return { plate: (letters+" "+digits).trim(), estimate: Math.round(point),
+           low: Math.round(low), high: Math.round(high), breakdown };
+}
+
+// ===== UI =====
+const $ = id => document.getElementById(id);
+function run() {
+  const letters = $('letters').value.trim(), numbers = $('numbers').value.trim();
+  $('err').textContent = '';
+  if (!letters && !numbers) { $('err').textContent = 'أدخل اللوحة · enter a plate'; return; }
+  render(estimate((letters+" "+numbers).trim()));
+}
+function render(d) {
+  $('price').textContent = d.estimate.toLocaleString() + ' ﷼';
+  $('range').textContent = 'القيمة المتوقعة بين · likely between ' +
+                           d.low.toLocaleString() + ' و ' + d.high.toLocaleString() + ' ﷼';
+  $('plateStr').textContent = d.plate;
+  const f = $('factors'); f.innerHTML = '';
+  if (!d.breakdown.length) f.innerHTML = '<div class="frow"><span class="lbl">لا توجد عوامل مميّزة · nothing notable about this plate</span></div>';
+  for (const b of d.breakdown) {
+    const cls = b.pct>0?'up':(b.pct<0?'down':'flat');
+    const arrow = b.pct>0?'▲ يرفع السعر':(b.pct<0?'▼ يخفض السعر':'');
+    const row = document.createElement('div'); row.className='frow';
+    row.innerHTML = '<span class="lbl">'+b.label+'</span><span class="eff '+cls+'">'+arrow+' '+b.effect+'</span>';
+    f.appendChild(row);
+  }
+  $('meta').textContent = 'تقدير تقريبي بناءً على ' + MODEL.n_samples.toLocaleString() +
+                          ' لوحة معروضة · estimate based on ' + MODEL.n_samples.toLocaleString() + ' listings';
+  $('result').style.display = 'block';
+}
+$('go').addEventListener('click', run);
+$('letters').addEventListener('keydown', e => { if (e.key==='Enter') run(); });
+$('numbers').addEventListener('keydown', e => { if (e.key==='Enter') run(); });
+document.querySelectorAll('.examples a').forEach(a => a.addEventListener('click', () => {
+  $('letters').value=a.dataset.l; $('numbers').value=a.dataset.n; run();
+}));
+</script>
+</body>
+</html>
