@@ -82,7 +82,7 @@
           <div class="range" id="sellRange"></div>
         </div>
         <div class="pcol list">
-          <div class="ptitle">سعر العرض لدى التجار · Dealer asking price</div>
+          <div class="ptitle">سعر العرض في الإعلانات · Asking price</div>
           <div class="price2" id="listPrice"></div>
           <div class="range" id="listRange"></div>
         </div>
@@ -97,7 +97,7 @@
 </div>
 <script>
 // ===== The trained model is embedded at build time (no server needed) =====
-const MODEL = /*__MODEL__*/ {"global_log": 9.891925375607032, "factors": {"digit_count": {"3": -0.054559131175583364, "4": -1.1219453728752498, "2": 0.4560632165250807, "1": 1.3859538048872546, "6": -0.37802809487622535}, "letter_pattern": {"AAA": 0.5273723422953304, "AAB": -0.11314118316772986, "ABC": 0.011189026901664902, "OTHER": 0.5471764870302183, "AB": -0.2634713026289241, "AA": -0.5327722038204319}, "digit_pattern": {"mixed": -0.0960926034088573, "round": 0.1942592657077069, "palindrome": -0.03121373406797163, "sequence": -0.08706432786954185, "same": 0.21252075750561028, "single": 0.23739361544582926}, "digit_repeat": {"1": -0.18272598688554254, "3": 0.13993743664832217, "2": 0.10018445520732941, "4": 1.0937509529378562}, "roundness": {"0": 0.008793605765487888, "3": 0.14529096105030767, "1": 0.1277392079733437, "2": -0.06694099732313909}, "source": {"j6j6e": 0.1438934480279813, "luhah": -0.5780034265179282}}, "sigma": 0.7347988587127681, "price_min": 43.0, "price_max": 1000000.0, "n_samples": 2060, "feature_names": ["digit_count", "letter_pattern", "digit_pattern", "digit_repeat", "roundness", "source"], "metrics": {"rmse_log": 0.7348, "median_abs_pct_err": 0.439}, "trained_at": "2026-06-11", "sources": ["j6j6e", "luhah"]} /*__END__*/;
+const MODEL = /*__MODEL__*/ {"global_log": 9.891618413375362, "factors": {"digit_count": {"3": -0.04605756878663132, "4": -0.9773184860227627, "2": 0.46479434204029385, "1": 1.8037142421218657, "6": -0.3716682575519372}, "letter_pattern": {"AAA": 0.7447876480724436, "AAB": -0.08575573984055358, "ABC": -0.008332336560087457, "OTHER": 0.4999039491932605, "AB": -0.3451822162249834, "AA": -0.5023653738293246}, "digit_pattern": {"mixed": -0.09433311723540568, "round": 0.19963015109741974, "palindrome": -0.06404582265582201, "sequence": 0.09363402508011018, "same": 0.28084851335033095, "single": 0.1359100986146588}, "digit_repeat": {"1": -0.20038995378984073, "3": 0.23940270793220852, "2": 0.08695853307058639, "4": 1.214479122370832}, "roundness": {"0": -0.007560093903427982, "3": 0.20792337849886114, "1": 0.17710428765796396, "2": -0.19431016447465144}, "source": {"j6j6e": 0.08643192579168235, "luhah": -0.6614380973508752, "lu7ah": 0.0324458936826294}}, "sigma": 0.7982598735305414, "price_min": 200.0, "price_max": 6900000.0, "n_samples": 6194, "feature_names": ["digit_count", "letter_pattern", "digit_pattern", "digit_repeat", "roundness", "source"], "metrics": {"rmse_log": 0.7983, "median_abs_pct_err": 0.442}, "trained_at": "2026-06-11", "sources": ["j6j6e", "lu7ah", "luhah"]} /*__END__*/;
 
 // ===== Port of pricing/letters.py =====
 const AR2LAT = {"ا":"A","ب":"B","ح":"J","د":"D","ر":"R","س":"S","ص":"X","ط":"T","ع":"E",
@@ -182,7 +182,7 @@ function effectText(mult){ const pct=(mult-1)*100; if (Math.abs(pct)<4) return "
 
 // ===== Port of pricing/model.py estimate_both() =====
 const Z = 0.674;
-const ANCHOR_SELL = "luhah", ANCHOR_LIST = "j6j6e";
+const ANCHOR_SELL = "luhah", ANCHOR_LIST = "lu7ah";
 const FIT_NAMES = MODEL.feature_names || FEATURE_NAMES;
 const HAS_SOURCE = FIT_NAMES.indexOf("source") !== -1;
 function clip(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
